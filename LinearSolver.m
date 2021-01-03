@@ -1,7 +1,24 @@
 classdef LinearSolver
     methods
-        function x = Gauss_Seidel(obj, A, b, eps, max_iter, initial_guess)
+        function [x, iter_str, k, err, root_str] = Gauss_Seidel(obj, A, b, eps, max_iter, initial_guess, map)
+            root_str = "";
+            iter_str = "";
+            for i=1:size(map)
+                iter_str = strcat(iter_str, sprintf("%s                        ",char(map.get(i))));
+                root_str = strcat(root_str, sprintf("%s                        ",char(map.get(i))));
+            end
+            iter_str = deblank(iter_str);
+            root_str = deblank(root_str);
+            iter_str = strcat(iter_str, sprintf("\n"));
+            root_str = strcat(root_str, sprintf("\n"));
+            for i=1:size(map)
+               iter_str = strcat(iter_str, sprintf("%f         ", initial_guess(i))); 
+            end
+            iter_str = deblank(iter_str);
+            
+            iter_str = strcat(iter_str, sprintf("\n"));
             [n,m] = size(A);
+            iterations = 1:1:max_iter;
             A = [A b];
             x = initial_guess;
             k = 1;
@@ -17,16 +34,33 @@ classdef LinearSolver
                         err = abs(s);
                     end
                     x(i) = x(i) + s;
+                    iters_for_all_vars(i, k) = x(i);
+                    iter_str = strcat(iter_str, sprintf("%f         ", x(i)));
                 end
+                iter_str = deblank(iter_str);
+                iter_str = strcat(iter_str, sprintf("\n"));
                 if err <= eps
                     break;
                 else
                     k = k+1;
                 end
             end
+            iterations = 1:1:length(iters_for_all_vars(1,:));
+            for i = 1:n
+               figure;
+               plot(iterations, iters_for_all_vars(i,:), 'LineWidth', 3);
+               grid on;
+               xlabel("iterations");ylabel("values/iterations");title(sprintf("iterations/values for %s",char(map.get(i))));
+            end
+            
         end
-        function x = LU_Decomp(obj, A, b)
-            [L,U,P] = objLU(A,0);
+        function [x, root_str] = LU_Decomp(obj, A, b, map)
+            root_str = "";
+            for i=1:size(map)
+                root_str = strcat(root_str, sprintf("%s                        ",char(map.get(i))));
+            end
+            root_str = strcat(root_str, sprintf("\n"));
+            [L,U,P] = obj.LU(A,0);
             y = obj.forward_sub(L, P*b);
             [n,m] = size(U);
             x = obj.back_sub(U,n,y);
@@ -45,21 +79,21 @@ classdef LinearSolver
                 E=diag(ones(nRow,1));
                 
                 maxPivot=max(A(n+1:end,n));
-                if abs(currentPivot)<eps  %zero, do row exchage always
-                    if abs(maxPivot)<eps  % not possible to exchange
+                if abs(currentPivot)<eps  
+                    if abs(maxPivot)<eps  
                         error 'unable to complete LU decomposition, bad A'
                     else
-                        [A, E, L] = obj.flipRows(A,n);
+                        [A, E, L] = obj.flipRows(A,n,L);
                     end
-                else %not a zero pivot, but still can exchange, check threshold
+                else 
                     if abs(currentPivot)<abs(maxPivot)
                         if abs(currentPivot-maxPivot)>=threshold
-                            [A, E, L] = obj.flipRows(A,n);
+                            [A, E, L] = obj.flipRows(A,n,L);
                         end
                     end
                 end
                 
-                P=P*E;  %update the perumtation matrix
+                P=P*E;  
                 
                 for i=n+1:nRow
                     L(i,n)=A(i,n)/A(n,n);
@@ -74,19 +108,17 @@ classdef LinearSolver
             P=P';
             U=A;
         end
-        function [A,E,L] = flipRows(obj,A, n)
+        function [A,E,L] = flipRows(obj,A, n, L)
             [c,I]= max(abs(A(n:end,n)));
             I=I+(n-1);
             tmp=A(n,:);
             A(n,:)=A(I,:);
             A(I,:)=tmp;
             
-            %make sure we also flip the L matrix rows to keep in sync
             tmp=L(n,:);
             L(n,:)=L(I,:);
             L(I,:)=tmp;
             
-            %now make the elementary matrix for this move
             E(n,:)=0;
             E(n,I)=1;
             E(I,:)=0;
@@ -95,7 +127,12 @@ classdef LinearSolver
         
         
         
-        function x = Gauss_Jordan(obj, A, b)
+        function [x, root_str] = Gauss_Jordan(obj, A, b, map)
+            root_str = "";
+            for i=1:size(map)
+                root_str = strcat(root_str, sprintf("%s                        ",char(map.get(i))));
+            end
+            root_str = strcat(root_str, sprintf("\n"));
             A = [A b];
             [m, n] = size(A);
             x = zeros(n-1,1);
@@ -124,7 +161,12 @@ classdef LinearSolver
             end
         end
         
-        function x = Gauss(obj, A, b, tol, er)
+        function [x, root_str] = Gauss(obj, A, b, tol, er, map)
+            root_str = "";
+            for i=1:size(map)
+                root_str = strcat(root_str, sprintf("%s                        ",char(map.get(i))));
+            end
+            root_str = strcat(root_str, sprintf("\n"));
             n = length(b);
             s = zeros(n,1);
             for i = 1:n

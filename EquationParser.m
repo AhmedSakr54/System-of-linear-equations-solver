@@ -1,10 +1,31 @@
 classdef EquationParser
     methods
-        function [A,x,b,map] = parseString(obj, str, num, map)
+        function [A, b, map1] = equationsToMatrix(obj, s)
+            [rows, cols] = size(s);
+            count = 0;
+            m = [];
+            for i=1:rows
+                str = deblank(s(i,:));
+                if isempty(str)
+                    continue;
+                end
+                count = count + 1;
+                m(count) = i;
+            end
+            map = java.util.HashMap;
+            map1 = java.util.HashMap;
+            b = zeros(count, 1);
+            A = zeros(count, count);
+            x = zeros(count, 1);
+            for i =1:count
+                newstr = deblank(s(m(i),:));
+                [A(i,:), x, b(i), map, map1] = obj.parseString(newstr, count, map, x, map1);
+            end
+        end
+        function [A,x,b,map, map1] = parseString(obj, str, num, map, x, map1)
             str = obj.makeSureThereIsSpaces(str);
             exp1 = split(str, " ");
             A = zeros(num, 1);
-            x = zeros(num, 1);
             b = 0;
             j = 1;
             exp1 = obj.checkForExtraSpaces(exp1);
@@ -26,6 +47,7 @@ classdef EquationParser
                         else
                             A(j) = 1;
                             map.put(x(j), j);
+                            map1.put(j, x(j));
                         end
                     end
                 else
@@ -35,6 +57,7 @@ classdef EquationParser
                     else
                         A(j) = str2double(coeff_var{1});
                         map.put(x(j), j);
+                        map1.put(j, x(j));
                     end
                     
                 end
@@ -80,7 +103,7 @@ classdef EquationParser
             n = length(exp);
             str = "";
             for i = 1:n
-                if obj.doIputSpace(exp(i)) == 1
+                if obj.doIputSpace(exp(i), i) == 1 
                     str = strcat(str, exp(i), " ");
                 else
                     str = strcat(str, exp(i));
@@ -89,7 +112,7 @@ classdef EquationParser
             end
         end
         
-        function doI = doIputSpace(obj, character)
+        function doI = doIputSpace(obj, character, i)
             doI = 0;
             if (double(character) >= 97 && double(character) <= 122)
                 doI = 1;
@@ -100,11 +123,24 @@ classdef EquationParser
             if character == '+'
                 doI = 1;
             end
-            if character == '-'
+            if character == '-' || character == '='
                 doI = 1;
+            end
+            if character == '-' && i == 1
+                doI = 0;
             end
             
         end
+        
+        function init_guess = getInitialGuesses(obj, str)
+           exp = split(str, " ");
+           n = length(exp);
+           init_guess = zeros(n, 1);
+           for i = 1:n
+              init_guess(i) = str2double(exp{i}); 
+           end
+        end
+        
         
     end
 end
